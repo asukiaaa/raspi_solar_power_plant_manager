@@ -8,7 +8,6 @@ import requests
 import os
 import logging
 import RPi.GPIO as GPIO
-import power_plant_config
 import ConfigParser
 
 relay_pin = 18
