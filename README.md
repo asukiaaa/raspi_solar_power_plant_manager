@@ -15,6 +15,9 @@ This system uses the following components.
 - raspi 18 pin <-> Relay trigger
 
 # Useage
+## Requirements
+- python-smbus
+
 ## Download
 ```
 mkdir ~/gitprojects

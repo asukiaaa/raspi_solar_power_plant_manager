@@ -1,2 +1,3 @@
 [default]
-thing_speak_api_key : your_thing_speak_api_key
+thingspeak_charge_channel_api_key : your_thingspeak_api_key
+thingspeak_consumed_power_channel_api_key : your_thingspeak_api_key
