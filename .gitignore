@@ -1,2 +1,3 @@
 src/power_plant.cfg
 log
+*.pyc
