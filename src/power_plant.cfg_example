@@ -1,3 +1,8 @@
 [default]
 thingspeak_charge_channel_api_key : your_thingspeak_api_key
 thingspeak_consumed_power_channel_api_key : your_thingspeak_api_key
+
+# check by the following command
+# sudo i2cdetect -y 1
+direct_use_power_sensor_address : your_sensor_address # like 0x45
+

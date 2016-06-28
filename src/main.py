@@ -49,7 +49,12 @@ GPIO.output(relay_pin, False)
 charge_controller = tracer_charge_controller.TracerChargeController("/dev/ttyAMA0")
 
 # using power sensor setting
-direct_use_power_sensor = ina226_controller.Ina226Controller(1, 0x45)
+try:
+  direct_use_power_sensor = ina226_controller.Ina226Controller(1, config.get('default', 'direct_use_power_sensor_address'))
+except Exception as e:
+  log_exception(e)
+  direct_use_power_sensor = ""
+  pass
 
 while (1):
 #for run_time_count in [1]:
@@ -61,8 +66,9 @@ while (1):
 
   # get average of 6 time in 1 min
   for i_per_10sec in range(6):
-    direct_use_ampere_sum  += direct_use_power_sensor.get_ampere()
-    direct_use_volt_sum    += direct_use_power_sensor.get_voltage()
+    if direct_use_power_sensor != "":
+      direct_use_ampere_sum  += direct_use_power_sensor.get_ampere()
+      direct_use_volt_sum    += direct_use_power_sensor.get_voltage()
 
     charge_controller.update_status()
     # charge_controller.print_status()
@@ -96,19 +102,20 @@ while (1):
     pass
 
   # for thingspeak consumed power channel
-  try:
-    r = requests.post('https://api.thingspeak.com/update.json',
-      data = {
-        'field1'  : direct_use_ampere_to_send,
-        'field2'  : direct_use_volt_to_send,
-        'field3'  : direct_use_watt_to_send,
-        'api_key' : config.get('default', 'thingspeak_consumed_power_channel_api_key'),
-      },
-      timeout=10)
-    print r.text
-  except Exception as e:
-    log_exception(e)
-    pass
+  if direct_use_power_sensor != "":
+    try:
+      r = requests.post('https://api.thingspeak.com/update.json',
+        data = {
+          'field1'  : direct_use_ampere_to_send,
+          'field2'  : direct_use_volt_to_send,
+          'field3'  : direct_use_watt_to_send,
+          'api_key' : config.get('default', 'thingspeak_consumed_power_channel_api_key'),
+        },
+        timeout=10)
+      print r.text
+    except Exception as e:
+      log_exception(e)
+      pass
 
   # solalog staging
   try:
@@ -140,8 +147,8 @@ while (1):
     pass
 
   # update connected relay status
-  if ( battery_volt_to_send > 25.4 ) or \
-     ( ( charged_watt_to_send > 50 ) and ( battery_volt_to_send > 24.7 ) ) :
+  if ( battery_volt_to_send > 25.8 ) or \
+     ( ( charged_watt_to_send > 100 ) and ( battery_volt_to_send > 24.7 ) ) :
     GPIO.output(relay_pin, True)
   else :
     GPIO.output(relay_pin, False)
