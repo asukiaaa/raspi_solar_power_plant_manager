@@ -8,9 +8,13 @@ import ConfigParser
 import tracer_charge_controller
 import ina226_controller
 
+this_dir_path = os.path.dirname(os.path.realpath(__file__))
+
 relay_pin = 18
 
-this_dir_path = os.path.dirname(os.path.realpath(__file__))
+# get average of 6 time in 1 min
+loop_num_to_get_average = 6
+loop_interval_sec = 10
 
 # read config
 config = ConfigParser.ConfigParser()
@@ -50,7 +54,7 @@ charge_controller = tracer_charge_controller.TracerChargeController("/dev/ttyAMA
 
 # using power sensor setting
 try:
-  direct_use_power_sensor = ina226_controller.Ina226Controller(1, config.get('default', 'direct_use_power_sensor_address'))
+  direct_use_power_sensor = ina226_controller.Ina226Controller(1, int(config.get('default', 'direct_use_power_sensor_address'), 16))
 except Exception as e:
   log_exception(e)
   direct_use_power_sensor = ""
@@ -64,8 +68,7 @@ while (1):
   direct_use_ampere_sum     = 0
   direct_use_volt_sum       = 0
 
-  # get average of 6 time in 1 min
-  for i_per_10sec in range(6):
+  for i_per_10sec in range(loop_num_to_get_average):
     if direct_use_power_sensor != "":
       direct_use_ampere_sum  += direct_use_power_sensor.get_ampere()
       direct_use_volt_sum    += direct_use_power_sensor.get_voltage()
@@ -75,14 +78,14 @@ while (1):
     panel_volt_sum            += charge_controller.panel_volt()
     battery_charge_ampere_sum += charge_controller.battery_charge_ampere()
     battery_volt_sum          += charge_controller.battery_volt()
-    time.sleep(10)
+    time.sleep(loop_interval_sec)
 
-  panel_volt_to_send            = panel_volt_sum            / 6
-  battery_charge_ampere_to_send = battery_charge_ampere_sum / 6
-  battery_volt_to_send          = battery_volt_sum          / 6
+  panel_volt_to_send            = panel_volt_sum            / loop_num_to_get_average
+  battery_charge_ampere_to_send = battery_charge_ampere_sum / loop_num_to_get_average
+  battery_volt_to_send          = battery_volt_sum          / loop_num_to_get_average
   charged_watt_to_send          = battery_volt_to_send * battery_charge_ampere_to_send
-  direct_use_ampere_to_send     = direct_use_ampere_sum     / 6
-  direct_use_volt_to_send       = direct_use_volt_sum       / 6
+  direct_use_ampere_to_send     = direct_use_ampere_sum     / loop_num_to_get_average
+  direct_use_volt_to_send       = direct_use_volt_sum       / loop_num_to_get_average
   direct_use_watt_to_send       = direct_use_ampere_to_send * direct_use_volt_to_send
 
   # for thingspeak charge channel
@@ -102,15 +105,17 @@ while (1):
     pass
 
   # for thingspeak consumed power channel
+  data_to_send = {}
   if direct_use_power_sensor != "":
+    data_to_send['field1'] = direct_use_ampere_to_send
+    data_to_send['field2'] = direct_use_volt_to_send
+    data_to_send['field3'] = direct_use_watt_to_send
+
+  if data_to_send != {}:
     try:
+      data_to_send['api_key'] = config.get('default', 'thingspeak_consumed_power_channel_api_key')
       r = requests.post('https://api.thingspeak.com/update.json',
-        data = {
-          'field1'  : direct_use_ampere_to_send,
-          'field2'  : direct_use_volt_to_send,
-          'field3'  : direct_use_watt_to_send,
-          'api_key' : config.get('default', 'thingspeak_consumed_power_channel_api_key'),
-        },
+        data = data_to_send,
         timeout=10)
       print r.text
     except Exception as e:
