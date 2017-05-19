@@ -60,6 +60,8 @@ except Exception as e:
   direct_use_power_sensor = ""
   pass
 
+is_battery_full = False
+
 while (1):
 #for run_time_count in [1]:
   panel_volt_sum            = 0
@@ -152,8 +154,15 @@ while (1):
     pass
 
   # update connected relay status
-  if ( battery_volt_to_send > 25.8 ) or \
-     ( ( charged_watt_to_send > 100 ) and ( battery_volt_to_send > 24.7 ) ) :
+  if ( battery_volt_to_send > 25.6 ) :
+    is_battery_full = True
+  if ( is_battery_full ) :
+    # if ( charged_watt_to_send < 20 and battery_volt_to_send < 25.3 ) :
+    #   is_battery_full = False
+    if ( battery_volt_to_send < 24.5 ) :
+      is_battery_full = False
+
+  if ( is_battery_full ):
     GPIO.output(relay_pin, True)
   else :
     GPIO.output(relay_pin, False)
